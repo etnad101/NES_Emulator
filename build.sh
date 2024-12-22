@@ -1,0 +1,1 @@
+cd build && cmake .. && make && ./nes_emulator && cd ..
