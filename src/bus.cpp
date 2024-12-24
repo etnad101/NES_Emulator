@@ -5,19 +5,19 @@
 
 Bus::Bus() {
     for (int i = 0; i < 0x0800; i++) {
-        this->ram[i] = 0xFF;
+        this->ram[i] = 0;
     }
 
     for (int i = 0; i < 8; i++) {
-        this->ppuRegs[i] = 0xFF;
+        this->ppuRegs[i] = 0;
     }
 
     for (int i = 0; i < 0x18; i++) {
-        this->apuIORregs[i] = 0xFF;
+        this->apuIORregs[i] = 0;
     }
 
     for (int i = 0; i < 0xBFE0; i++) {
-        this->cartridge[i] = 0xFF;
+        this->cartridge[i] = 0;
     } 
 }
 

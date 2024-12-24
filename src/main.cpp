@@ -36,8 +36,9 @@ int main() {
         bus.write(0xC000+ i, buffer[i + 0x10]);
     }
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 8991; i++) {
         cpu.tick();
     }
+    print_bus(bus, 0xFFFF);
     return 0;
 }

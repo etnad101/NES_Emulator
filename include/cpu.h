@@ -29,7 +29,8 @@ private:
     bool f_V; 
     bool f_N;
 
-    bool nextI;
+    bool pendingIFlagValue;
+    bool pendingIFlagUpdate;
 
     // helper functions
     uint16_t getAddress(AddressingMode mode);
@@ -37,6 +38,7 @@ private:
     void setP(uint8_t flags, bool updateInow);
     void updateZNFlags(uint8_t value);
     void compare(uint8_t reg, AddressingMode mode);
+    uint16_t calculateBranchAddr(uint8_t offset);
     void branch(Name name);
     void logInstr(Opcode opcode);
     void pushStack(uint8_t value);
@@ -68,4 +70,5 @@ private:
 public: 
     Cpu(Bus* bus);
     void tick();
+    void pollIRQ();
 };
