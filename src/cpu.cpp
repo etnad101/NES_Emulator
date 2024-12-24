@@ -193,7 +193,7 @@ static std::map<uint8_t, Opcode> opcodes {
 };
 
 Cpu::Cpu(Bus* bus) 
-: bus(bus), cycles(0), pageCrossed(false), r_A(0), r_X(0), r_Y(0), pc(0xC000), r_S(0xFD), 
+: bus(bus), cycles(0), pageCrossed(false), r_A(0), r_X(0), r_Y(0), pc(0xFFFC), r_S(0xFD), 
 f_N(false), f_V(false), f_D(false), f_I(true), f_Z(false), f_C(false), pendingIFlagValue(false), pendingIFlagUpdate(false) {}
 
 uint16_t Cpu::getAddress(AddressingMode mode) {
@@ -312,7 +312,7 @@ uint16_t Cpu::getAddress(AddressingMode mode) {
             return addr;
         }
         default:
-            std::cout << "ERROR: Addressing mode should not be used" << std::endl;
+            std::cerr << "ERROR: Addressing mode should not be used" << std::endl;
             exit(-1);
     }
 }
@@ -398,7 +398,7 @@ void Cpu::branch(Name name) {
             if (f_V) branch = true;
             break;
         default:
-            std::cout << "ERROR: Only branch opcodes should be calling this function" << std::endl;
+            std::cerr << "ERROR: Only branch opcodes should be calling this function" << std::endl;
             exit(-1);
     }
 
@@ -1070,7 +1070,7 @@ void Cpu::tick() {
     if (iterator != opcodes.end()) {
         opcode = iterator->second;
     } else {
-        std::cout << "ERROR: Opcode 0x" 
+        std::cerr << "ERROR: Opcode 0x" 
                 << std::hex << std::setw(2) << std::setfill('0') 
                 << static_cast<unsigned int>(code) 
                 << " not found $" << std::setw(4) << pc << std::endl;
@@ -1262,4 +1262,16 @@ void Cpu::pollIRQ() {
         f_I = pendingIFlagValue;
         pendingIFlagUpdate = false;
     }
+}
+
+void Cpu::reset() {
+    pc = 0xFFFC;
+    r_S = 0xFD;
+    f_I = 1;
+
+    uint16_t lo = static_cast<uint16_t>(bus->read(pc));
+    uint16_t hi = static_cast<uint16_t>(bus->read(pc + 1));
+    pc = ((hi << 8) | lo);
+
+    cycles = 5;
 }

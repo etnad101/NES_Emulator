@@ -71,4 +71,5 @@ public:
     Cpu(Bus* bus);
     void tick();
     void pollIRQ();
+    void reset();
 };
