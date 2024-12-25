@@ -6,11 +6,11 @@
 
 class Bus {
 private:
-    uint8_t ram[0x0800];
-    uint8_t ppuRegs[0x0008];
-    uint8_t apuIORregs[0x0018];
-    bool cartridgeInserted;
-    Cartridge* cartridge;
+    uint8_t m_ram[0x0800];
+    uint8_t m_ppuRegs[0x0008];
+    uint8_t m_apuIORregs[0x0018];
+    bool m_cartridgeInserted;
+    Cartridge* m_cartridge;
 public:
     Bus();
     void loadCartridge(Cartridge* cartridge);

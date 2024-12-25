@@ -21,45 +21,45 @@ Cartridge::Cartridge(std::string romPath) {
         exit(-1);
     }
 
-    prgROMSize = buffer[PRG_ROM_SIZE_ADDR] * PRG_ROM_CHUNK_SIZE;
-    chrROMSize = buffer[CHR_ROM_SIZE_ADDR] * CHR_ROM_CHUNK_SIZE;
+    m_prgROMSize = buffer[PRG_ROM_SIZE_ADDR] * PRG_ROM_CHUNK_SIZE;
+    m_chrROMSize = buffer[CHR_ROM_SIZE_ADDR] * CHR_ROM_CHUNK_SIZE;
 
-    std::cout << "prg rom size: 0x" << std::hex << prgROMSize << ", chr rom size: 0x" << chrROMSize << std::endl;
+    std::cout << "prg rom size: 0x" << std::hex << m_prgROMSize << ", chr rom size: 0x" << m_chrROMSize << std::endl;
 
-    prgROM = new uint8_t[prgROMSize];
-    chrROM = new uint8_t[chrROMSize];
+    m_prgROM = new uint8_t[m_prgROMSize];
+    m_chrROM = new uint8_t[m_chrROMSize];
 
-    for (int i = 0; i < prgROMSize; i++) {
-        prgROM[i] = buffer[0x10 + i];
+    for (int i = 0; i < m_prgROMSize; i++) {
+        m_prgROM[i] = buffer[0x10 + i];
     }
 
-    for (int i = 0; i < chrROMSize; i++) {
-        chrROM[i] = buffer[i + 0x10 + prgROMSize];
+    for (int i = 0; i < m_chrROMSize; i++) {
+        m_chrROM[i] = buffer[i + 0x10 + m_prgROMSize];
     }
 
     file.close();
 }
 
 Cartridge::~Cartridge() {
-    delete[] prgROM;
-    delete[] chrROM;
+    delete[] m_prgROM;
+    delete[] m_chrROM;
 }
 
 uint8_t Cartridge::getPrgROM(int index) {
-    if (prgROMSize == PRG_ROM_CHUNK_SIZE) {
+    if (m_prgROMSize == PRG_ROM_CHUNK_SIZE) {
         index &= 0x3FFF;
     }
-    if (index < 0 || index >= prgROMSize) {
+    if (index < 0 || index >= m_prgROMSize) {
         std::cerr << "ERROR: Attempted to read outside of prgROM";
         exit(-1);
     }
-    return prgROM[index];
+    return m_prgROM[index];
 }
 
 uint8_t Cartridge::getChrROM(int index) {
-    if (index < 0 || index >= chrROMSize) {
+    if (index < 0 || index >= m_chrROMSize) {
         std::cerr << "ERROR: Attempted to read outside of chrROM";
         exit(-1);
     }
-    return chrROM[index];
+    return m_chrROM[index];
 }

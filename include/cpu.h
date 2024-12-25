@@ -10,16 +10,16 @@
 
 class Cpu {
 private:
-    Bus* bus;
-    unsigned int cycles;
-    bool pageCrossed;
+    Bus* m_bus;
+    unsigned int m_cycles;
+    bool m_pageCrossed;
 
     // registers
     uint8_t r_A; 
     uint8_t r_X;
     uint8_t r_Y; 
     uint8_t r_S;
-    uint16_t pc;
+    uint16_t r_pc;
 
     // flags
     bool f_C;
@@ -29,8 +29,8 @@ private:
     bool f_V; 
     bool f_N;
 
-    bool pendingIFlagValue;
-    bool pendingIFlagUpdate;
+    bool m_pendingIFlagValue;
+    bool m_pendingIFlagUpdate;
 
     // helper functions
     uint16_t getAddress(AddressingMode mode);
@@ -72,4 +72,5 @@ public:
     void tick();
     void pollIRQ();
     void reset();
+    unsigned int getCycles();
 };

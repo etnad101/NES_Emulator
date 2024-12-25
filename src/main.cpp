@@ -1,8 +1,7 @@
 #include <iostream>
 #include <iomanip>
-#include "bus.h"
-#include "cpu.h"
 #include "cartridge.h"
+#include "emulator.h"
 
 void print_bus(Bus &bus, int start, int end) {
     for (int addr = start; addr <= end; addr++) {
@@ -17,15 +16,10 @@ void print_bus(Bus &bus, int start, int end) {
 }
 
 int main() {
-    Bus bus = Bus();
-    Cpu cpu = Cpu(&bus);
+    Emulator emulator = Emulator();
     std::string romPath = "../roms/DonkeyKong.nes";
     Cartridge cartridge(romPath);
-    bus.loadCartridge(&cartridge);
-    cpu.reset();
-    for (int i = 0; i < 15; i++) {
-        cpu.tick();
-    }
-    //print_bus(bus, 0x8000, 0xFFFF);
+    emulator.loadCartridge(&cartridge);
+    emulator.run();
     return 0;
 }

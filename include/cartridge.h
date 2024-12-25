@@ -23,19 +23,19 @@ enum class CartridgeType {
 
 class Cartridge {
 private:
-    int prgROMSize;
-    int chrROMSize;
+    int m_prgROMSize;
+    int m_chrROMSize;
 
-    bool nametableArangement;
-    bool persistentMemory;
-    bool hasTrainer;
-    bool altNametableLayout;
+    bool m_nametableArangement;
+    bool m_persistentMemory;
+    bool m_hasTrainer;
+    bool m_altNametableLayout;
 
-    Mapper mapper;
-    CartridgeType cartridgeType;
+    Mapper m_mapper;
+    CartridgeType m_cartridgeType;
 
-    uint8_t* prgROM;
-    uint8_t* chrROM;
+    uint8_t* m_prgROM;
+    uint8_t* m_chrROM;
 public:
     Cartridge(std::string rom_path);
     ~Cartridge();

@@ -29,6 +29,12 @@ add_library(
     src/cartridge.cpp
 )
 
+add_library(
+    emulator
+    include/emulator.h
+    src/emulator.cpp
+)
+
 add_executable(
     nes_emulator 
     src/main.cpp 
@@ -40,6 +46,7 @@ target_link_libraries(
     cpu
     opcodes
     cartridge
+    emulator
 )
 
 
