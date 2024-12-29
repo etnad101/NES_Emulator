@@ -2,6 +2,9 @@
 #include <iomanip>
 #include "cartridge.h"
 #include "emulator.h"
+#include "SDL.h"
+#include "window.h"
+
 
 void print_bus(Bus &bus, int start, int end) {
     for (int addr = start; addr <= end; addr++) {
@@ -10,7 +13,7 @@ void print_bus(Bus &bus, int start, int end) {
             std::cout << std::hex << std::setw(4) << std::setfill('0') << addr << " ";
         }
 
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned)bus.read(addr) << " ";
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned)bus.cpu_read(addr) << " ";
     }
     std::cout << std::endl;
 }
@@ -21,5 +24,7 @@ int main() {
     Cartridge cartridge(romPath);
     emulator.loadCartridge(&cartridge);
     emulator.run();
+    SDL_Quit();
+
     return 0;
 }

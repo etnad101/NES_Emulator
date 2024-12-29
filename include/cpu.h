@@ -10,6 +10,8 @@
 
 class Cpu {
 private:
+    bool m_debug;
+
     Bus* m_bus;
     unsigned int m_cycles;
     bool m_pageCrossed;
@@ -69,7 +71,7 @@ private:
     void i_rti();
 public: 
     Cpu(Bus* bus);
-    void tick();
+    int tick();
     void pollIRQ();
     void reset();
     unsigned int getCycles();

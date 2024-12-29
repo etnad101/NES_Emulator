@@ -193,7 +193,7 @@ static std::map<uint8_t, Opcode> opcodes {
 };
 
 Cpu::Cpu(Bus* bus) 
-: m_bus(bus), m_cycles(0), m_pageCrossed(false), r_A(0), r_X(0), r_Y(0), r_pc(0xC000), r_S(0xFD), 
+: m_debug(false), m_bus(bus), m_cycles(0), m_pageCrossed(false), r_A(0), r_X(0), r_Y(0), r_pc(0xC000), r_S(0xFD), 
 f_N(false), f_V(false), f_D(false), f_I(true), f_Z(false), f_C(false), m_pendingIFlagValue(false), m_pendingIFlagUpdate(false) {}
 
 uint16_t Cpu::getAddress(AddressingMode mode) {
@@ -206,36 +206,36 @@ uint16_t Cpu::getAddress(AddressingMode mode) {
         }
         case AddressingMode::ZeroPage:
         {
-            uint16_t addr = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t addr = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             r_pc++;
             return addr;
         }
         case AddressingMode::ZeroPageX:
         {
-            uint8_t addr = m_bus->read(r_pc) + r_X;
+            uint8_t addr = m_bus->cpu_read(r_pc) + r_X;
             this->r_pc++;
             return addr;
         }
         case AddressingMode::ZeroPageY:
         {
-            uint8_t addr = m_bus->read(r_pc) + r_Y;
+            uint8_t addr = m_bus->cpu_read(r_pc) + r_Y;
             this->r_pc++;
             return addr;
 
         }
         case AddressingMode::Absolute:
         {
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
             return ((hi << 8) | lo);
         }
         case AddressingMode::AbsoluteX:
         {
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
 
             uint16_t baseAddr = ((hi << 8) | lo);
@@ -249,9 +249,9 @@ uint16_t Cpu::getAddress(AddressingMode mode) {
         }
         case AddressingMode::AbsoluteY:
         {
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             this->r_pc++;
 
             uint16_t baseAddr = ((hi << 8) | lo);
@@ -265,9 +265,9 @@ uint16_t Cpu::getAddress(AddressingMode mode) {
         }
         case AddressingMode::Indirect:
         {
-            uint8_t loPtr = m_bus->read(r_pc);
+            uint8_t loPtr = m_bus->cpu_read(r_pc);
             this->r_pc++;
-            uint8_t hiPtr = m_bus->read(r_pc);
+            uint8_t hiPtr = m_bus->cpu_read(r_pc);
             this->r_pc++;
 
             uint8_t nextLo = loPtr + 1;
@@ -275,31 +275,31 @@ uint16_t Cpu::getAddress(AddressingMode mode) {
             uint16_t lo = (static_cast<uint16_t>(hiPtr) << 8) | (static_cast<uint16_t>(loPtr));
             uint16_t hi = (static_cast<uint16_t>(hiPtr) << 8) | (static_cast<uint16_t>(nextLo));
 
-            uint16_t loVal = static_cast<uint16_t>(m_bus->read(lo));
-            uint16_t hiVal = static_cast<uint16_t>(m_bus->read(hi));
+            uint16_t loVal = static_cast<uint16_t>(m_bus->cpu_read(lo));
+            uint16_t hiVal = static_cast<uint16_t>(m_bus->cpu_read(hi));
 
             return (hiVal << 8) | loVal;
         }
         case AddressingMode::IndirectX:
         {
 
-            uint8_t base = m_bus->read(r_pc);
+            uint8_t base = m_bus->cpu_read(r_pc);
             r_pc++;
             uint8_t loPtr = base + r_X;
             uint8_t hiPtr = loPtr + 1; 
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(loPtr));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(hiPtr));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(loPtr));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(hiPtr));
 
             return (hi << 8) | lo;
         }
         case AddressingMode::IndirectY:
         { 
 
-            uint16_t loPtr = static_cast<uint16_t>(m_bus->read(r_pc));
+            uint16_t loPtr = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
             r_pc++;
             uint8_t hiPtr = loPtr + 1; 
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(loPtr));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(hiPtr));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(loPtr));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(hiPtr));
 
             uint16_t baseAddr = ((hi << 8) | lo);
             uint16_t offset = static_cast<uint16_t>(r_Y);
@@ -352,7 +352,7 @@ void Cpu::updateZNFlags(uint8_t value) {
 
 void Cpu::compare(uint8_t reg, AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    uint8_t value = m_bus->read(addr);
+    uint8_t value = m_bus->cpu_read(addr);
 
     f_C = reg >= value;
     updateZNFlags(reg - value);
@@ -399,7 +399,7 @@ void Cpu::branch(Name name) {
 
     if (branch) {
         m_cycles++;
-        uint8_t offset = m_bus->read(r_pc);
+        uint8_t offset = m_bus->cpu_read(r_pc);
         uint16_t prePc = r_pc;
         r_pc = calculateBranchAddr(offset);
         // I think i should add a cycle if it crosses a page, but the tests say otherwise
@@ -412,9 +412,12 @@ void Cpu::branch(Name name) {
 }
 
 void Cpu::logInstr(Opcode opcode) {
+    if (!m_debug)
+        return;
+
     std::cout << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << r_pc << "  ";
     for (int i = 0; i < opcode.bytes; i++) {
-        std::cout << std::setw(2) << static_cast<unsigned int>(m_bus->read(r_pc + i)) << " ";
+        std::cout << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(r_pc + i)) << " ";
     }
     for (int i = 0; i < 3 - opcode.bytes; i++) {
         std::cout << "   "; 
@@ -428,32 +431,32 @@ void Cpu::logInstr(Opcode opcode) {
     switch (opcode.name) {
         case Name::LDA:
             std::cout << "LDA";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::STA:
             std::cout << "STA";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::LDX:
             std::cout << "LDX";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::STX:
             std::cout << "STX";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::LDY:
             std::cout << "LDY";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::STY:
             std::cout << "STY";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::TAX:
@@ -470,22 +473,22 @@ void Cpu::logInstr(Opcode opcode) {
             break;
         case Name::ADC:
             std::cout << "ADC";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::SBC:
             std::cout << "SBC";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::INC:
             std::cout << "INC";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::DEC:
             std::cout << "DEC";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::INX:
@@ -503,93 +506,93 @@ void Cpu::logInstr(Opcode opcode) {
         case Name::ASL:
             std::cout << "ASL";
             if (opcode.mode != AddressingMode::Accumulator)
-                endVal = m_bus->read(getAddress(opcode.mode));
+                endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::LSR:
             std::cout << "LSR";
             if (opcode.mode != AddressingMode::Accumulator)
-                endVal = m_bus->read(getAddress(opcode.mode));
+                endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::ROL:
             std::cout << "ROL";
             if (opcode.mode != AddressingMode::Accumulator)
-                endVal = m_bus->read(getAddress(opcode.mode));
+                endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::ROR:
             std::cout << "ROR";
             if (opcode.mode != AddressingMode::Accumulator)
-                endVal = m_bus->read(getAddress(opcode.mode));
+                endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::AND:
             std::cout << "AND";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::ORA:
             std::cout << "ORA";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::EOR:
             std::cout << "EOR";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::BIT:
             std::cout << "BIT";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::CMP:
             std::cout << "CMP";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::CPX:
             std::cout << "CPX";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::CPY:
             std::cout << "CPY";
-            endVal = m_bus->read(getAddress(opcode.mode));
+            endVal = m_bus->cpu_read(getAddress(opcode.mode));
             showMem = true;
             break;
         case Name::BCC:
             std::cout << "BCC";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BCS:
             std::cout << "BCS";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BEQ:
             std::cout << "BEQ";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BNE:
             std::cout << "BNE";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BPL:
             std::cout << "BPL";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BMI:
             std::cout << "BMI";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BVC:
             std::cout << "BVC";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::BVS:
             std::cout << "BVS";
-            endVal = calculateBranchAddr(m_bus->read(r_pc));
+            endVal = calculateBranchAddr(m_bus->cpu_read(r_pc));
             break;
         case Name::JMP:
             std::cout << "JMP";
@@ -659,8 +662,8 @@ void Cpu::logInstr(Opcode opcode) {
         case AddressingMode::Absolute:
             std::cout 
                 << "$" 
-                << std::setw(2) << static_cast<unsigned int>(m_bus->read(r_pc + 2)) 
-                << std::setw(2) << static_cast<unsigned int>(m_bus->read(r_pc + 1));
+                << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(r_pc + 2)) 
+                << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(r_pc + 1));
             if (showMem) {
                 std::cout 
                     << " = " 
@@ -672,8 +675,8 @@ void Cpu::logInstr(Opcode opcode) {
             break;
         case AddressingMode::AbsoluteX: 
         {
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc + 1));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc + 2));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 1));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 2));
             uint16_t base = (hi << 8) | lo;
             uint16_t addr = base + static_cast<uint16_t>(r_X);
             std::cout 
@@ -681,14 +684,14 @@ void Cpu::logInstr(Opcode opcode) {
                 << std::setw(2) << static_cast<unsigned int>(hi) 
                 << std::setw(2) << static_cast<unsigned int>(lo)
                 << ",X @ " << std::setw(4) << static_cast<unsigned int>(addr)
-                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << "        ";
             break;
         }
         case AddressingMode::AbsoluteY: 
         {
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc + 1));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc + 2));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 1));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 2));
             uint16_t base = (hi << 8) | lo;
             uint16_t addr = base + static_cast<uint16_t>(r_Y);
             std::cout 
@@ -696,43 +699,43 @@ void Cpu::logInstr(Opcode opcode) {
                 << std::setw(2) << static_cast<unsigned int>(hi) 
                 << std::setw(2) << static_cast<unsigned int>(lo)
                 << ",Y @ " << std::setw(4) << static_cast<unsigned int>(addr)
-                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << "        ";
             break;
         }
         case AddressingMode::Immediate:
             std::cout 
                 << "#$" 
-                << std::setw(2) << static_cast<unsigned int>(m_bus->read(r_pc + 1))
+                << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(r_pc + 1))
                 << "                       ";
             break;
         case AddressingMode::ZeroPage:
             std::cout 
-                << "$" << std::setw(2) << static_cast<unsigned int>(m_bus->read(r_pc + 1)) 
+                << "$" << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(r_pc + 1)) 
                 << " = " << std::setw(2) << static_cast<unsigned int>(endVal)
                 << "                   ";
             break;
         case AddressingMode::ZeroPageX:
         {
-            uint8_t base = m_bus->read(r_pc + 1);
+            uint8_t base = m_bus->cpu_read(r_pc + 1);
             uint8_t addr = base + r_X;
             std::cout 
                 << "$" 
                 << std::setw(2) << static_cast<unsigned int>(base) 
                 << ",X @ " << std::setw(2) << static_cast<unsigned int>(addr)
-                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << "            ";
             break;
         }
         case AddressingMode::ZeroPageY:
         {
-            uint8_t base = m_bus->read(r_pc + 1);
+            uint8_t base = m_bus->cpu_read(r_pc + 1);
             uint8_t addr = base + r_Y;
             std::cout 
                 << "$" 
                 << std::setw(2) << static_cast<unsigned int>(base) 
                 << ",Y @ " << std::setw(2) << static_cast<unsigned int>(addr)
-                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << "            ";
             break;
         }
@@ -747,16 +750,16 @@ void Cpu::logInstr(Opcode opcode) {
         case AddressingMode::Indirect:
         {
 
-            uint8_t loPtr = m_bus->read(r_pc + 1);
-            uint8_t hiPtr = m_bus->read(r_pc + 2);
+            uint8_t loPtr = m_bus->cpu_read(r_pc + 1);
+            uint8_t hiPtr = m_bus->cpu_read(r_pc + 2);
 
             uint8_t nextLo = loPtr + 1;
 
             uint16_t lo = (static_cast<uint16_t>(hiPtr) << 8) | (static_cast<uint16_t>(loPtr));
             uint16_t hi = (static_cast<uint16_t>(hiPtr) << 8) | (static_cast<uint16_t>(nextLo));
 
-            uint16_t loVal = static_cast<uint16_t>(m_bus->read(lo));
-            uint16_t hiVal = static_cast<uint16_t>(m_bus->read(hi));
+            uint16_t loVal = static_cast<uint16_t>(m_bus->cpu_read(lo));
+            uint16_t hiVal = static_cast<uint16_t>(m_bus->cpu_read(hi));
 
             uint16_t addr = (hiVal << 8) | loVal;
 
@@ -769,26 +772,26 @@ void Cpu::logInstr(Opcode opcode) {
         }
         case AddressingMode::IndirectX:
         {
-            uint8_t base = m_bus->read(r_pc + 1);
+            uint8_t base = m_bus->cpu_read(r_pc + 1);
             uint8_t loPtr = base + r_X;
             uint8_t hiPtr = loPtr + 1; 
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(loPtr));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(hiPtr));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(loPtr));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(hiPtr));
             uint16_t addr = (hi << 8) | lo;
             std::cout 
                 << "($" << std::setw(2) << static_cast<unsigned int>(base) << ",X) @ "
                 << static_cast<unsigned int>(loPtr)
                 << " = " << std::hex << std::setw(4) << static_cast<unsigned int>(addr)
-                << " = " << std::hex << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::hex << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << "   ";
             break;
         }
         case AddressingMode::IndirectY:
         {
-            uint16_t loPtr = static_cast<uint16_t>(m_bus->read(r_pc + 1));
+            uint16_t loPtr = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 1));
             uint8_t hiPtr = loPtr + 1; 
-            uint16_t lo = static_cast<uint16_t>(m_bus->read(loPtr));
-            uint16_t hi = static_cast<uint16_t>(m_bus->read(hiPtr));
+            uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(loPtr));
+            uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(hiPtr));
 
             uint16_t baseAddr = ((hi << 8) | lo);
             uint16_t offset = static_cast<uint16_t>(r_Y);
@@ -798,7 +801,7 @@ void Cpu::logInstr(Opcode opcode) {
                 << "($" << std::setw(2) << static_cast<unsigned int>(loPtr) << "),Y = "
                 << std::setw(4) << static_cast<unsigned int>(baseAddr)
                 << " @ " << std::hex << std::setw(4) << static_cast<unsigned int>(addr)
-                << " = " << std::hex << std::setw(2) << static_cast<unsigned int>(m_bus->read(addr))
+                << " = " << std::hex << std::setw(2) << static_cast<unsigned int>(m_bus->cpu_read(addr))
                 << " ";
         }
     }
@@ -822,7 +825,7 @@ void Cpu::pushStack(uint8_t value) {
 uint8_t Cpu::popStack() {
     r_S++;
     uint16_t addr = static_cast<uint16_t>(r_S) + 0x0100;
-    return m_bus->read(addr);
+    return m_bus->cpu_read(addr);
 }
 
 unsigned int Cpu::getCycles() {
@@ -831,7 +834,7 @@ unsigned int Cpu::getCycles() {
 
 void Cpu::i_lda(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_A = m_bus->read(addr);
+    r_A = m_bus->cpu_read(addr);
     updateZNFlags(r_A);
     if (m_pageCrossed) m_cycles++;
 }
@@ -843,7 +846,7 @@ void Cpu::i_sta(AddressingMode mode) {
 
 void Cpu::i_ldx(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_X = m_bus->read(addr);
+    r_X = m_bus->cpu_read(addr);
     updateZNFlags(r_X);
     if (m_pageCrossed) m_cycles++;
 }
@@ -855,7 +858,7 @@ void Cpu::i_stx(AddressingMode mode) {
 
 void Cpu::i_ldy(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_Y = m_bus->read(addr);
+    r_Y = m_bus->cpu_read(addr);
     updateZNFlags(r_Y);
     if (m_pageCrossed) m_cycles++;
 }
@@ -868,7 +871,7 @@ void Cpu::i_sty(AddressingMode mode) {
 void Cpu::i_adc(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
     uint16_t a = static_cast<uint16_t>(r_A);
-    uint16_t b = static_cast<uint16_t>(m_bus->read(addr));
+    uint16_t b = static_cast<uint16_t>(m_bus->cpu_read(addr));
     uint16_t sum = a + b;
 
     if (f_C)
@@ -888,7 +891,7 @@ void Cpu::i_adc(AddressingMode mode) {
 void Cpu::i_sbc(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
     uint16_t a = static_cast<uint16_t>(r_A);
-    uint16_t b = ~static_cast<uint16_t>(m_bus->read(addr));
+    uint16_t b = ~static_cast<uint16_t>(m_bus->cpu_read(addr));
     uint16_t diff = a + b;
 
     if (f_C)
@@ -907,14 +910,14 @@ void Cpu::i_sbc(AddressingMode mode) {
 
 void Cpu::i_inc(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    uint8_t value = m_bus->read(addr) + 1;
+    uint8_t value = m_bus->cpu_read(addr) + 1;
     m_bus->write(addr, value);
     updateZNFlags(value);
 }
 
 void Cpu::i_dec(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    uint8_t value = m_bus->read(addr) - 1;
+    uint8_t value = m_bus->cpu_read(addr) - 1;
     m_bus->write(addr, value);
     updateZNFlags(value);
 }
@@ -926,7 +929,7 @@ void Cpu::i_asl(AddressingMode mode) {
         r_A = value << 1;
     } else {
         uint16_t addr = getAddress(mode);
-        value = m_bus->read(addr);
+        value = m_bus->cpu_read(addr);
         m_bus->write(addr, value << 1);
     }
 
@@ -942,7 +945,7 @@ void Cpu::i_lsr(AddressingMode mode) {
         r_A = value >> 1;
     } else {
         uint16_t addr = getAddress(mode);
-        value = m_bus->read(addr);
+        value = m_bus->cpu_read(addr);
         m_bus->write(addr, value >> 1);
     }
 
@@ -960,7 +963,7 @@ void Cpu::i_rol(AddressingMode mode) {
         r_A = newValue;
     } else {
         uint16_t addr = getAddress(mode);
-        value = m_bus->read(addr);
+        value = m_bus->cpu_read(addr);
         newValue = (value << 1) | f_C;
         m_bus->write(addr, newValue);
     }
@@ -980,7 +983,7 @@ void Cpu::i_ror(AddressingMode mode) {
         r_A = newValue;
     } else {
         uint16_t addr = getAddress(mode);
-        value = m_bus->read(addr);
+        value = m_bus->cpu_read(addr);
         newValue = (value >> 1) | (f_C << 7);
         m_bus->write(addr, newValue);
     }
@@ -992,28 +995,28 @@ void Cpu::i_ror(AddressingMode mode) {
 
 void Cpu::i_and(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_A &= m_bus->read(addr);
+    r_A &= m_bus->cpu_read(addr);
     updateZNFlags(r_A);
     if (m_pageCrossed) m_cycles++;
 }
 
 void Cpu::i_ora(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_A |= m_bus->read(addr);
+    r_A |= m_bus->cpu_read(addr);
     updateZNFlags(r_A);
     if (m_pageCrossed) m_cycles++;
 }
 
 void Cpu::i_eor(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    r_A ^= m_bus->read(addr);
+    r_A ^= m_bus->cpu_read(addr);
     updateZNFlags(r_A);
     if (m_pageCrossed) m_cycles++;
 }
 
 void Cpu::i_bit(AddressingMode mode) {
     uint16_t addr = getAddress(mode);
-    uint8_t mem = m_bus->read(addr);
+    uint8_t mem = m_bus->cpu_read(addr);
     uint8_t res = r_A & mem;
 
     f_V = (mem & 0x40) > 0;
@@ -1057,10 +1060,10 @@ void Cpu::i_rti() {
     r_pc = addr;
 }
 
-void Cpu::tick() {
+int Cpu::tick() {
     m_pageCrossed = false;
     // fetch opcode
-    uint8_t code = m_bus->read(r_pc);
+    uint8_t code = m_bus->cpu_read(r_pc);
 
     std::map<uint8_t, Opcode>::iterator iterator = opcodes.find(code);
     Opcode opcode;
@@ -1073,7 +1076,7 @@ void Cpu::tick() {
                 << std::hex << std::setw(2) << std::setfill('0') 
                 << static_cast<unsigned int>(code) 
                 << " not found $" << std::setw(4) << r_pc << std::endl;
-        return;
+        return 0;
     }
 
     logInstr(opcode);
@@ -1251,6 +1254,7 @@ void Cpu::tick() {
 
 
     m_cycles += opcode.cycles;
+    return opcode.cycles;
 }
 
 void Cpu::pollIRQ() {
@@ -1268,8 +1272,8 @@ void Cpu::reset() {
     r_S = 0xFD;
     f_I = 1;
 
-    uint16_t lo = static_cast<uint16_t>(m_bus->read(r_pc));
-    uint16_t hi = static_cast<uint16_t>(m_bus->read(r_pc + 1));
+    uint16_t lo = static_cast<uint16_t>(m_bus->cpu_read(r_pc));
+    uint16_t hi = static_cast<uint16_t>(m_bus->cpu_read(r_pc + 1));
     r_pc = ((hi << 8) | lo);
 
     m_cycles = 5;
